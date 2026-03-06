@@ -67,3 +67,6 @@
 - [x] Test de categorías y productos
 - [x] Test de control de roles (admin vs seller)
 - [x] 11 tests pasando en total
+
+## Bug fixes
+- [x] Eliminar redirección OAuth del framework - el login debe usar solo usuario/contraseña propio
