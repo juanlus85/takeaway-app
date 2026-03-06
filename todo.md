@@ -74,3 +74,4 @@
 - [x] Bug: popup de error en pantalla de login por console.error de errores de autenticación esperados
 - [x] Bug: getUserByOpenId devuelve undefined porque busca por openId vacío en lugar de ID numérico
 - [x] Bug: queries protegidas se disparaban sin sesión activa (añadido enabled: !!user)
+- [x] Rediseño Vendedor: layout mobile-first sin scroll, botones grandes táctiles para móvil/tablet
