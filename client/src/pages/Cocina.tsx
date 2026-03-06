@@ -85,9 +85,10 @@ function KitchenOrderCard({
 }) {
   const elapsed = useElapsedTime(order.paidAt);
   const allCompleted = order.items.every((i) => i.completedInKitchen);
-  const timerColor = getTimerColor(elapsed);
-  const cardBorder = getCardBorder(elapsed);
-  const cardBg = getCardBg(elapsed);
+  const isReady = order.status === "ready";
+  const timerColor = isReady ? "bg-green-500/20 border-green-500/50 text-green-400" : getTimerColor(elapsed);
+  const cardBorder = isReady ? "border-green-500/70 shadow-green-500/20" : getCardBorder(elapsed);
+  const cardBg = isReady ? "bg-green-950/40" : getCardBg(elapsed);
 
   return (
     <div
@@ -175,22 +176,32 @@ function KitchenOrderCard({
         ))}
       </div>
 
+      {/* Ready status banner */}
+      {isReady && (
+        <div className="mx-4 mb-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/20 border border-green-500/40">
+          <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+          <span className="text-sm font-bold text-green-300">Pendiente de entrega al cliente</span>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="px-4 pb-4">
-        <Button
-          onClick={() => onDeliver(order.id)}
-          disabled={isMarkingReady}
-          className={cn(
-            "w-full font-bold text-base h-14",
-            allCompleted
-              ? "bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-700/30"
-              : "bg-primary hover:bg-primary/90"
-          )}
-          size="lg"
-        >
-          <CheckCircle2 className="w-5 h-5 mr-2" />
-          {allCompleted ? "✅ PEDIDO PREPARADO" : "Marcar como Preparado"}
-        </Button>
+        {!isReady && (
+          <Button
+            onClick={() => onDeliver(order.id)}
+            disabled={isMarkingReady}
+            className={cn(
+              "w-full font-bold text-base h-14",
+              allCompleted
+                ? "bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-700/30"
+                : "bg-primary hover:bg-primary/90"
+            )}
+            size="lg"
+          >
+            <CheckCircle2 className="w-5 h-5 mr-2" />
+            {allCompleted ? "✅ PEDIDO PREPARADO" : "Marcar como Preparado"}
+          </Button>
+        )}
       </div>
     </div>
   );
