@@ -223,6 +223,15 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Mark order as ready (kitchen done — seller delivers to customer)
+    markReady: kitchenProcedure
+      .input(z.object({ orderId: z.number() }))
+      .mutation(async ({ input }) => {
+        const order = await db.getOrderById(input.orderId);
+        if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido no encontrado" });
+        await db.markOrderReady(input.orderId);
+        return { success: true };
+      }),
     // Mark kitchen item as completed
     completeItem: protectedProcedure
       .input(z.object({ itemId: z.number(), completed: z.boolean() }))

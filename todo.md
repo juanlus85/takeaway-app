@@ -82,3 +82,6 @@
 - [x] Modal cobro: opción "sin llamador" para pedidos que van a cocina
 - [x] Pantalla Pendientes vendedor: estados "En cocina" y "Listo para entregar", marcar entregado
 - [x] Cocina: polling automático cada 5s para nuevos pedidos
+- [x] Cocina: cambiar botón "Entregado" por "Pedido Preparado" (marca estado ready, no delivered)
+- [x] Vendedor: aviso parpadeante en barra superior cuando hay pedidos en estado ready
+- [x] Vendedor/Pendientes: solo el vendedor puede marcar "Entregado al cliente"

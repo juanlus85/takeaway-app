@@ -76,10 +76,12 @@ function KitchenOrderCard({
   order,
   onDeliver,
   onToggleItem,
+  isMarkingReady,
 }: {
   order: KitchenOrder;
   onDeliver: (id: number) => void;
   onToggleItem: (itemId: number, completed: boolean) => void;
+  isMarkingReady?: boolean;
 }) {
   const elapsed = useElapsedTime(order.paidAt);
   const allCompleted = order.items.every((i) => i.completedInKitchen);
@@ -177,16 +179,17 @@ function KitchenOrderCard({
       <div className="px-4 pb-4">
         <Button
           onClick={() => onDeliver(order.id)}
+          disabled={isMarkingReady}
           className={cn(
-            "w-full font-bold",
+            "w-full font-bold text-base h-14",
             allCompleted
-              ? "bg-green-600 hover:bg-green-700 text-white"
-              : "bg-primary/80 hover:bg-primary"
+              ? "bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-700/30"
+              : "bg-primary hover:bg-primary/90"
           )}
           size="lg"
         >
-          <CheckCircle2 className="w-4 h-4 mr-2" />
-          {allCompleted ? "✓ Entregar Pedido" : "Marcar Entregado"}
+          <CheckCircle2 className="w-5 h-5 mr-2" />
+          {allCompleted ? "✅ PEDIDO PREPARADO" : "Marcar como Preparado"}
         </Button>
       </div>
     </div>
@@ -202,9 +205,9 @@ export default function Cocina() {
     enabled: !!user,
   });
 
-  const deliverMutation = trpc.orders.deliver.useMutation({
+  const markReadyMutation = trpc.orders.markReady.useMutation({
     onSuccess: () => {
-      toast.success("Pedido entregado", { duration: 2000 });
+      toast.success("✅ Pedido marcado como preparado", { duration: 2000 });
       utils.orders.kitchen.invalidate();
       utils.orders.pending.invalidate();
     },
@@ -235,8 +238,8 @@ export default function Cocina() {
     },
   });
 
-  const handleDeliver = (orderId: number) => {
-    deliverMutation.mutate({ orderId });
+  const handleMarkReady = (orderId: number) => {
+    markReadyMutation.mutate({ orderId });
   };
 
   const handleToggleItem = (itemId: number, completed: boolean) => {
@@ -304,8 +307,9 @@ export default function Cocina() {
                 <KitchenOrderCard
                   key={order.id}
                   order={order as KitchenOrder}
-                  onDeliver={handleDeliver}
+                  onDeliver={handleMarkReady}
                   onToggleItem={handleToggleItem}
+                  isMarkingReady={markReadyMutation.isPending}
                 />
               ))}
             </div>

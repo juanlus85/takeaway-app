@@ -80,7 +80,17 @@ export default function Vendedor() {
   const { data: categories = [] } = trpc.categories.list.useQuery();
   const { data: products = [] } = trpc.products.listAll.useQuery();
   const { data: callers = [] } = trpc.callers.available.useQuery(undefined, { enabled: !!user });
+  const { data: pendingOrders = [] } = trpc.orders.pending.useQuery(undefined, {
+    refetchInterval: 5000,
+    enabled: !!user,
+  });
   const utils = trpc.useUtils();
+
+  // Count orders ready to deliver (status = 'ready')
+  const readyCount = useMemo(
+    () => (pendingOrders as Array<{ status: string }>).filter((o) => o.status === "ready").length,
+    [pendingOrders]
+  );
 
   const createOrderMutation = trpc.orders.create.useMutation({
     onSuccess: () => {
@@ -294,11 +304,26 @@ export default function Vendedor() {
         {/* ── Products area ── */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Header */}
-          <div className="h-12 flex items-center px-3 border-b border-border bg-card/60 backdrop-blur-sm shrink-0">
-            <h1 className="text-base font-bold text-foreground">Nuevo Pedido</h1>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {(user as any)?.displayName || "Vendedor"}
-            </span>
+          <div className="flex flex-col shrink-0">
+            <div className="h-12 flex items-center px-3 border-b border-border bg-card/60 backdrop-blur-sm">
+              <h1 className="text-base font-bold text-foreground">Nuevo Pedido</h1>
+              <span className="ml-auto text-xs text-muted-foreground">
+                {(user as any)?.displayName || "Vendedor"}
+              </span>
+            </div>
+            {/* Ready orders alert banner */}
+            {readyCount > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white text-sm font-bold animate-pulse cursor-pointer"
+                onClick={() => window.location.href = '/pendientes'}>
+                <span className="text-base">🔔</span>
+                <span>
+                  {readyCount === 1
+                    ? "¡1 PEDIDO PREPARADO — Pendiente de entrega al cliente!"
+                    : `¡${readyCount} PEDIDOS PREPARADOS — Pendientes de entrega al cliente!`}
+                </span>
+                <span className="ml-auto text-xs underline opacity-80">Ver pedidos →</span>
+              </div>
+            )}
           </div>
 
           {/* Category chips */}
