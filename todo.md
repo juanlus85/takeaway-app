@@ -85,3 +85,4 @@
 - [x] Cocina: cambiar botón "Entregado" por "Pedido Preparado" (marca estado ready, no delivered)
 - [x] Vendedor: aviso parpadeante en barra superior cuando hay pedidos en estado ready
 - [x] Vendedor/Pendientes: solo el vendedor puede marcar "Entregado al cliente"
+- [x] Cocina: mostrar también pedidos preparados (ready) debajo de los pendientes, primero pending luego ready

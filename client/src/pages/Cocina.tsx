@@ -301,19 +301,61 @@ export default function Cocina() {
               <h2 className="text-xl font-bold text-foreground mb-2">¡Todo al día!</h2>
               <p className="text-muted-foreground">No hay pedidos pendientes en cocina</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {orders.map((order) => (
-                <KitchenOrderCard
-                  key={order.id}
-                  order={order as KitchenOrder}
-                  onDeliver={handleMarkReady}
-                  onToggleItem={handleToggleItem}
-                  isMarkingReady={markReadyMutation.isPending}
-                />
-              ))}
-            </div>
-          )}
+          ) : (() => {
+            const pendingOrders = (orders as KitchenOrder[]).filter((o) => o.status === "pending");
+            const readyOrders = (orders as KitchenOrder[]).filter((o) => o.status === "ready");
+            return (
+              <div className="space-y-6">
+                {/* Pending section */}
+                {pendingOrders.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse" />
+                      <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">
+                        Por preparar
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">({pendingOrders.length})</span>
+                      </h2>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {pendingOrders.map((order) => (
+                        <KitchenOrderCard
+                          key={order.id}
+                          order={order}
+                          onDeliver={handleMarkReady}
+                          onToggleItem={handleToggleItem}
+                          isMarkingReady={markReadyMutation.isPending}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ready section */}
+                {readyOrders.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                      <h2 className="text-sm font-bold text-green-400 uppercase tracking-wide">
+                        Preparados — pendientes de entrega
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">({readyOrders.length})</span>
+                      </h2>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 opacity-60">
+                      {readyOrders.map((order) => (
+                        <KitchenOrderCard
+                          key={order.id}
+                          order={order}
+                          onDeliver={handleMarkReady}
+                          onToggleItem={handleToggleItem}
+                          isMarkingReady={markReadyMutation.isPending}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </AppLayout>

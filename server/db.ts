@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   type InsertCategory,
@@ -187,11 +187,15 @@ export async function getPendingOrders() {
 export async function getKitchenOrders() {
   const db = await getDb();
   if (!db) return [];
+  // pending first (status_order=0), ready last (status_order=1), then by arrival time
   return db
     .select()
     .from(orders)
     .where(and(eq(orders.requiresKitchen, true), inArray(orders.status, ["pending", "ready"])))
-    .orderBy(orders.paidAt);
+    .orderBy(
+      sql`CASE WHEN ${orders.status} = 'pending' THEN 0 ELSE 1 END`,
+      orders.paidAt
+    );
 }
 
 export async function getOrderItems(orderId: number) {
