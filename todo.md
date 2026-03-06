@@ -75,3 +75,10 @@
 - [x] Bug: getUserByOpenId devuelve undefined porque busca por openId vacío en lugar de ID numérico
 - [x] Bug: queries protegidas se disparaban sin sesión activa (añadido enabled: !!user)
 - [x] Rediseño Vendedor: layout mobile-first sin scroll, botones grandes táctiles para móvil/tablet
+- [ ] Modal de cobro: opción "sin llamador" para pedidos con cocina cuando no se quiere asignar llamador
+- [ ] Pantalla Pendientes del vendedor: mostrar pedidos en cocina (con tiempo) y pendientes de entrega al cliente, permitir marcar entregado
+- [ ] Cocina: actualización automática en tiempo real (polling o websocket) para nuevos pedidos
+- [x] Producto "Otros" con precio libre en cada categoría (botón automático en cada categoría)
+- [x] Modal cobro: opción "sin llamador" para pedidos que van a cocina
+- [x] Pantalla Pendientes vendedor: estados "En cocina" y "Listo para entregar", marcar entregado
+- [x] Cocina: polling automático cada 5s para nuevos pedidos

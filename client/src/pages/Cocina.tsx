@@ -38,7 +38,7 @@ function useElapsedTime(paidAt: Date) {
   useEffect(() => {
     const interval = setInterval(() => {
       setElapsed(Math.floor((Date.now() - new Date(paidAt).getTime()) / 1000));
-    }, 10000); // update every 10s
+    }, 5000); // update every 5s
     return () => clearInterval(interval);
   }, [paidAt]);
 
@@ -198,7 +198,7 @@ export default function Cocina() {
   const utils = trpc.useUtils();
 
   const { data: orders = [], isLoading } = trpc.orders.kitchen.useQuery(undefined, {
-    refetchInterval: 8000, // Poll every 8 seconds
+    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
     enabled: !!user,
   });
 
