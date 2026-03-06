@@ -1,0 +1,124 @@
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Loader2, UtensilsCrossed } from "lucide-react";
+
+export default function Login() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
+
+  const loginMutation = trpc.auth.login.useMutation({
+    onSuccess: async (data) => {
+      await utils.auth.me.invalidate();
+      // Redirect based on role
+      const role = data.user.role;
+      if (role === "kitchen") {
+        setLocation("/cocina");
+      } else if (role === "admin") {
+        setLocation("/admin");
+      } else {
+        setLocation("/vendedor");
+      }
+    },
+    onError: (err) => {
+      toast.error(err.message || "Error al iniciar sesión");
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      toast.error("Introduce usuario y contraseña");
+      return;
+    }
+    loginMutation.mutate({ username: username.trim(), password });
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      {/* Background gradient */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
+            <UtensilsCrossed className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="text-3xl font-bold text-foreground" style={{ fontFamily: 'Poppins, sans-serif' }}>
+            TakeAway
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">Sistema de Gestión de Pedidos</p>
+        </div>
+
+        {/* Card */}
+        <div className="bg-card border border-border rounded-2xl p-8 shadow-2xl">
+          <h2 className="text-xl font-semibold text-foreground mb-6">Iniciar Sesión</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-sm font-medium text-foreground">
+                Usuario
+              </Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="Introduce tu usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                autoFocus
+                className="h-12 text-base bg-input border-border focus:border-primary"
+                disabled={loginMutation.isPending}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                Contraseña
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Introduce tu contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                className="h-12 text-base bg-input border-border focus:border-primary"
+                disabled={loginMutation.isPending}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 text-base font-semibold"
+              disabled={loginMutation.isPending}
+            >
+              {loginMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                "Entrar"
+              )}
+            </Button>
+          </form>
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          v1.0 · {new Date().getFullYear()} TakeAway Manager
+        </p>
+      </div>
+    </div>
+  );
+}

@@ -4,34 +4,57 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Vendedor from "./pages/Vendedor";
+import Cocina from "./pages/Cocina";
+import Pendientes from "./pages/Pendientes";
+import Historial from "./pages/Historial";
+import Admin from "./pages/Admin";
+import { useAuth } from "./_core/hooks/useAuth";
+import { useLocation } from "wouter";
+import { useEffect } from "react";
+
+function RootRedirect() {
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      setLocation("/login");
+      return;
+    }
+    const role = (user as any).role;
+    if (role === "kitchen") setLocation("/cocina");
+    else if (role === "admin") setLocation("/admin");
+    else setLocation("/vendedor");
+  }, [user, loading, setLocation]);
+
+  return null;
+}
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
+      <Route path="/" component={RootRedirect} />
+      <Route path="/login" component={Login} />
+      <Route path="/vendedor" component={Vendedor} />
+      <Route path="/cocina" component={Cocina} />
+      <Route path="/pendientes" component={Pendientes} />
+      <Route path="/historial" component={Historial} />
+      <Route path="/admin" component={Admin} />
+      <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <Toaster />
+          <Toaster richColors position="top-right" />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

@@ -1,11 +1,21 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import {
+  type InsertCategory,
+  type InsertOrder,
+  type InsertOrderItem,
+  type InsertProduct,
+  type InsertUser,
+  callers,
+  categories,
+  orderItems,
+  orders,
+  products,
+  users,
+} from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -18,75 +28,235 @@ export async function getDb() {
   return _db;
 }
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+// ─── Users ────────────────────────────────────────────────────────────────────
+export async function createUser(user: InsertUser) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
+  if (!db) throw new Error("DB not available");
+  await db.insert(users).values(user);
 }
 
-export async function getUserByOpenId(openId: string) {
+export async function getUserByUsername(username: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+  return result[0];
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(users).orderBy(users.createdAt);
+}
+
+export async function updateUser(id: number, data: Partial<InsertUser>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(users).set(data).where(eq(users.id, id));
+}
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+export async function getAllCategories() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(categories).where(eq(categories.active, true)).orderBy(categories.sortOrder);
+}
+
+export async function getAllCategoriesAdmin() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(categories).orderBy(categories.sortOrder);
+}
+
+export async function createCategory(data: InsertCategory) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(categories).values(data);
+}
+
+export async function updateCategory(id: number, data: Partial<InsertCategory>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(categories).set(data).where(eq(categories.id, id));
+}
+
+export async function deleteCategory(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(categories).set({ active: false }).where(eq(categories.id, id));
+}
+
+// ─── Products ─────────────────────────────────────────────────────────────────
+export async function getProductsByCategory(categoryId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(products)
+    .where(and(eq(products.categoryId, categoryId), eq(products.active, true)))
+    .orderBy(products.sortOrder);
+}
+
+export async function getAllProducts() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(products).where(eq(products.active, true)).orderBy(products.sortOrder);
+}
+
+export async function getAllProductsAdmin() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(products).orderBy(products.categoryId, products.sortOrder);
+}
+
+export async function createProduct(data: InsertProduct) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(products).values(data);
+}
+
+export async function updateProduct(id: number, data: Partial<InsertProduct>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(products).set(data).where(eq(products.id, id));
+}
+
+export async function deleteProduct(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(products).set({ active: false }).where(eq(products.id, id));
+}
+
+// ─── Callers ──────────────────────────────────────────────────────────────────
+export async function getAvailableCallers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(callers).where(eq(callers.inUse, false)).orderBy(callers.number);
+}
+
+export async function getAllCallers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(callers).orderBy(callers.number);
+}
+
+export async function setCallerInUse(number: number, orderId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(callers).set({ inUse: true, orderId }).where(eq(callers.number, number));
+}
+
+export async function releaseCallers(numbers: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  if (numbers.length === 0) return;
+  await db
+    .update(callers)
+    .set({ inUse: false, orderId: null })
+    .where(inArray(callers.number, numbers));
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+export async function createOrder(order: InsertOrder, items: Omit<InsertOrderItem, 'orderId'>[]) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(orders).values(order).$returningId();
+  const orderId = result!.id;
+  if (items.length > 0) {
+    await db.insert(orderItems).values(items.map((i) => ({ ...i, orderId })));
+  }
+  return orderId;
+}
+
+export async function getPendingOrders() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(orders)
+    .where(inArray(orders.status, ["pending", "ready"]))
+    .orderBy(orders.paidAt);
+}
+
+export async function getKitchenOrders() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.requiresKitchen, true), inArray(orders.status, ["pending", "ready"])))
+    .orderBy(orders.paidAt);
+}
+
+export async function getOrderItems(orderId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+}
+
+export async function getOrdersWithItems(orderIds: number[]) {
+  const db = await getDb();
+  if (!db) return [];
+  if (orderIds.length === 0) return [];
+  return db.select().from(orderItems).where(inArray(orderItems.orderId, orderIds));
+}
+
+export async function markOrderDelivered(orderId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db
+    .update(orders)
+    .set({ status: "delivered", deliveredAt: new Date() })
+    .where(eq(orders.id, orderId));
+}
+
+export async function markOrderReady(orderId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(orders).set({ status: "ready" }).where(eq(orders.id, orderId));
+}
+
+export async function markItemCompleted(itemId: number, completed: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db
+    .update(orderItems)
+    .set({ completedInKitchen: completed })
+    .where(eq(orderItems.id, itemId));
+}
+
+export async function getDeliveredOrders(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(orders)
+    .where(eq(orders.status, "delivered"))
+    .orderBy(desc(orders.deliveredAt))
+    .limit(limit);
+}
+
+export async function getOrderById(orderId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  return result[0];
+}
+
+// ─── SDK compatibility shims ──────────────────────────────────────────────────
+// The core SDK calls getUserByOpenId / upsertUser for OAuth flow.
+// We keep these as no-ops / aliases so the framework compiles without errors.
+// Our own auth uses username+password and bypasses OAuth entirely.
+export async function getUserByOpenId(_openId: string): Promise<import('../drizzle/schema').User | undefined> {
+  return undefined;
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function upsertUser(_user: any) {
+  // no-op: we manage users via createUser / updateUser
+}
