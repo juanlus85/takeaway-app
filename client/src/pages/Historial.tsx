@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { History, ChevronDown, ChevronUp, User, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -115,7 +116,8 @@ function OrderRow({ order }: { order: HistoryOrder }) {
 }
 
 export default function Historial() {
-  const { data: orders = [], isLoading } = trpc.orders.history.useQuery({ limit: 200 });
+  const { user } = useAuth();
+  const { data: orders = [], isLoading } = trpc.orders.history.useQuery({ limit: 200 }, { enabled: !!user });
 
   const historyOrders = orders as HistoryOrder[];
 

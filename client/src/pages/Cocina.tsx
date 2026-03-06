@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -193,10 +194,12 @@ function KitchenOrderCard({
 }
 
 export default function Cocina() {
+  const { user } = useAuth();
   const utils = trpc.useUtils();
 
   const { data: orders = [], isLoading } = trpc.orders.kitchen.useQuery(undefined, {
     refetchInterval: 8000, // Poll every 8 seconds
+    enabled: !!user,
   });
 
   const deliverMutation = trpc.orders.deliver.useMutation({

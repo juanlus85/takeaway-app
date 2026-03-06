@@ -70,3 +70,7 @@
 
 ## Bug fixes
 - [x] Eliminar redirección OAuth del framework - el login debe usar solo usuario/contraseña propio
+- [x] Bug: auth.me lanza UNAUTHED_ERR_MSG en lugar de devolver null cuando no hay sesión
+- [x] Bug: popup de error en pantalla de login por console.error de errores de autenticación esperados
+- [x] Bug: getUserByOpenId devuelve undefined porque busca por openId vacío en lugar de ID numérico
+- [x] Bug: queries protegidas se disparaban sin sesión activa (añadido enabled: !!user)

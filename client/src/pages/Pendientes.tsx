@@ -1,5 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -41,10 +42,12 @@ function getElapsedMinutes(date: Date) {
 }
 
 export default function Pendientes() {
+  const { user } = useAuth();
   const utils = trpc.useUtils();
 
   const { data: orders = [], isLoading } = trpc.orders.pending.useQuery(undefined, {
     refetchInterval: 10000,
+    enabled: !!user,
   });
 
   const deliverMutation = trpc.orders.deliver.useMutation({

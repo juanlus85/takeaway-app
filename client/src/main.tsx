@@ -7,17 +7,26 @@ import superjson from "superjson";
 import App from "./App";
 import "./index.css";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Don't retry on auth errors — they are expected when not logged in
+      retry: (failureCount, error) => {
+        if (error instanceof TRPCClientError && error.message === UNAUTHED_ERR_MSG) return false;
+        return failureCount < 2;
+      },
+    },
+  },
+});
+
+const isAuthError = (error: unknown): boolean => {
+  return error instanceof TRPCClientError && error.message === UNAUTHED_ERR_MSG;
+};
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
-  if (!(error instanceof TRPCClientError)) return;
+  if (!isAuthError(error)) return;
   if (typeof window === "undefined") return;
-
-  const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
-
-  if (!isUnauthorized) return;
-
-  // Redirect to our own login page (NOT the Manus OAuth portal)
+  // Already on login page — do nothing
   if (window.location.pathname === "/login") return;
   window.location.href = "/login";
 };
@@ -26,7 +35,10 @@ queryClient.getQueryCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.query.state.error;
     redirectToLoginIfUnauthorized(error);
-    console.error("[API Query Error]", error);
+    // Only log non-auth errors to avoid the debug popup on the login screen
+    if (!isAuthError(error)) {
+      console.error("[API Query Error]", error);
+    }
   }
 });
 
@@ -34,7 +46,9 @@ queryClient.getMutationCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.mutation.state.error;
     redirectToLoginIfUnauthorized(error);
-    console.error("[API Mutation Error]", error);
+    if (!isAuthError(error)) {
+      console.error("[API Mutation Error]", error);
+    }
   }
 });
 

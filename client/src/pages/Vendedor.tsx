@@ -66,7 +66,7 @@ export default function Vendedor() {
 
   const { data: categories = [] } = trpc.categories.list.useQuery();
   const { data: products = [] } = trpc.products.listAll.useQuery();
-  const { data: callers = [], refetch: refetchCallers } = trpc.callers.available.useQuery();
+  const { data: callers = [], refetch: refetchCallers } = trpc.callers.available.useQuery(undefined, { enabled: !!user });
   const utils = trpc.useUtils();
 
   const createOrderMutation = trpc.orders.create.useMutation({

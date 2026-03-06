@@ -250,13 +250,17 @@ export async function getOrderById(orderId: number) {
 }
 
 // ─── SDK compatibility shims ──────────────────────────────────────────────────
-// The core SDK calls getUserByOpenId / upsertUser for OAuth flow.
-// We keep these as no-ops / aliases so the framework compiles without errors.
-// Our own auth uses username+password and bypasses OAuth entirely.
-export async function getUserByOpenId(_openId: string): Promise<import('../drizzle/schema').User | undefined> {
-  return undefined;
+// The SDK calls getUserByOpenId(openId) where openId = String(user.id) from our JWT.
+// We resolve it back to a real user row so authenticateRequest works correctly.
+export async function getUserByOpenId(openId: string): Promise<import('../drizzle/schema').User | undefined> {
+  const numericId = parseInt(openId, 10);
+  if (isNaN(numericId)) return undefined;
+  return getUserById(numericId);
 }
+
+// upsertUser is called by the SDK to update lastSignedIn — we can safely ignore it
+// since we don't have that column in our schema.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function upsertUser(_user: any) {
-  // no-op: we manage users via createUser / updateUser
+  // no-op: our users are managed via createUser / updateUser
 }
