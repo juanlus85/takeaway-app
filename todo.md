@@ -100,3 +100,4 @@
 - [x] Añadir service worker básico para funcionamiento offline
 - [x] Configurar meta tags PWA en index.html (apple-touch-icon, theme-color, manifest)
 - [x] Añadir banner de instalación en la pantalla de login (iOS: instrucciones paso a paso; Android: botón instalar directo)
+- [x] Bug PWA: orientación bloqueada en vertical — manifest.json orientation cambiado a "any", viewport sin user-scalable=no
