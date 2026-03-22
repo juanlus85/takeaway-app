@@ -1,0 +1,27 @@
+{
+  "name": "TakeAway Manager",
+  "short_name": "TakeAway",
+  "description": "Sistema de gestión de pedidos para tienda take away",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#f59e0b",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310419663031419078/jSyvM5fSkpToMpM2XPVTG6/takeaway-icon-192_341a85ec.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310419663031419078/jSyvM5fSkpToMpM2XPVTG6/takeaway-icon-512-resized_fc8a440d.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "productivity", "utilities"],
+  "screenshots": []
+}

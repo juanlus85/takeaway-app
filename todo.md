@@ -93,3 +93,10 @@
 - [x] Bug iOS: barra blanca de autocompletado en campo de nota personalizada del popup de modificadores
 - [x] Bug iOS: barra de herramientas del teclado Safari (llave/tarjeta/ubicación) en inputs de la app
 - [x] Bug iOS: barra blanca de contraseñas/tarjetas sigue apareciendo sobre el teclado en Safari — aplicadas técnicas avanzadas: inputmode dinámico (none→text en onFocus), honeypot fields en login, data-form-type=other, meta tags PWA, ids/names no reconocibles por iOS
+
+## PWA (Progressive Web App)
+- [x] Generar icono de la app (512x512 y 192x192)
+- [x] Crear manifest.json con nombre, colores y iconos
+- [x] Añadir service worker básico para funcionamiento offline
+- [x] Configurar meta tags PWA en index.html (apple-touch-icon, theme-color, manifest)
+- [x] Añadir banner de instalación en la pantalla de login (iOS: instrucciones paso a paso; Android: botón instalar directo)

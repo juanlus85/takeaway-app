@@ -5,12 +5,30 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
     <title>TakeAway Manager</title>
-    <!-- iOS Safari: comportamiento PWA nativo y reducir barra de autofill -->
+
+    <!-- PWA: Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- PWA: iOS Safari -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TakeAway" />
+    <link rel="apple-touch-icon" href="https://d2xsxph8kpxj0f.cloudfront.net/310419663031419078/jSyvM5fSkpToMpM2XPVTG6/takeaway-icon-192_341a85ec.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="https://d2xsxph8kpxj0f.cloudfront.net/310419663031419078/jSyvM5fSkpToMpM2XPVTG6/takeaway-icon-192_341a85ec.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="https://d2xsxph8kpxj0f.cloudfront.net/310419663031419078/jSyvM5fSkpToMpM2XPVTG6/takeaway-icon-512-resized_fc8a440d.png" />
+
+    <!-- PWA: Android / Chrome -->
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#f59e0b" />
+    <meta name="application-name" content="TakeAway" />
+
+    <!-- PWA: General -->
+    <meta name="description" content="Sistema de gestión de pedidos para tienda take away" />
+    <link rel="icon" type="image/png" href="https://d2xsxph8kpxj0f.cloudfront.net/310419663031419078/jSyvM5fSkpToMpM2XPVTG6/takeaway-icon-192_341a85ec.png" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
@@ -19,6 +37,16 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Service Worker registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').catch(function() {
+            // Service worker registration failed silently
+          });
+        });
+      }
+    </script>
     <script
       defer
       src="%VITE_ANALYTICS_ENDPOINT%/umami"
