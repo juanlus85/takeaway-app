@@ -618,6 +618,10 @@ export default function Vendedor() {
                 onKeyDown={(e) => e.key === "Enter" && handleCustomizeConfirm()}
                 className="h-11 text-base"
                 autoFocus={customizeModifiers.length === 0}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
             </div>
 
@@ -676,7 +680,12 @@ export default function Vendedor() {
               <Input placeholder="Ej: 4 quesos, margarita..." value={pizzaType}
                 onChange={(e) => setPizzaType(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handlePizzaConfirm()}
-                autoFocus className="h-12 text-base" />
+                autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                className="h-12 text-base" />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={() => setShowPizzaInput(false)}>Cancelar</Button>

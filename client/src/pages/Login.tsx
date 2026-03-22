@@ -64,7 +64,7 @@ export default function Login() {
         <div className="bg-card border border-border rounded-2xl p-8 shadow-2xl">
           <h2 className="text-xl font-semibold text-foreground mb-6">Iniciar Sesión</h2>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-medium text-foreground">
                 Usuario
@@ -75,7 +75,10 @@ export default function Login() {
                 placeholder="Introduce tu usuario"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 autoFocus
                 className="h-12 text-base bg-input border-border focus:border-primary"
                 disabled={loginMutation.isPending}
@@ -92,7 +95,7 @@ export default function Login() {
                 placeholder="Introduce tu contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
+                autoComplete="off"
                 className="h-12 text-base bg-input border-border focus:border-primary"
                 disabled={loginMutation.isPending}
               />
