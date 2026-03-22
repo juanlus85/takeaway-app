@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -62,23 +62,44 @@ export default function Login() {
 
         {/* Card */}
         <div className="bg-card border border-border rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-xl font-semibold text-foreground mb-6">Iniciar Sesión</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-6">Acceso</h2>
 
-          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5">
+          {/*
+            Técnicas anti-autofill iOS Safari:
+            1. autoComplete="off" en el form
+            2. Campo honeypot oculto antes del primer input real (confunde al gestor de contraseñas)
+            3. id/name con valores aleatorios que iOS no reconoce como usuario/contraseña
+            4. data-form-type="other" para evitar la detección de tipo formulario
+            5. Placeholder sin palabras clave como "usuario", "contraseña", "password"
+          */}
+          <form
+            onSubmit={handleSubmit}
+            autoComplete="off"
+            data-form-type="other"
+            className="space-y-5"
+          >
+            {/* Honeypot fields — hidden from users but confuse iOS autofill detection */}
+            <div style={{ display: 'none' }} aria-hidden="true">
+              <input type="text" name="username_fake" tabIndex={-1} />
+              <input type="password" name="password_fake" tabIndex={-1} />
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium text-foreground">
-                Usuario
+              <Label htmlFor="ta-user" className="text-sm font-medium text-foreground">
+                Identificación
               </Label>
               <Input
-                id="username"
+                id="ta-user"
+                name="ta-user-field"
                 type="text"
-                placeholder="Introduce tu usuario"
+                placeholder="Introduce tu código de acceso"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck={false}
+                data-form-type="other"
                 autoFocus
                 className="h-12 text-base bg-input border-border focus:border-primary"
                 disabled={loginMutation.isPending}
@@ -86,16 +107,18 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-foreground">
-                Contraseña
+              <Label htmlFor="ta-pin" className="text-sm font-medium text-foreground">
+                Clave de acceso
               </Label>
               <Input
-                id="password"
+                id="ta-pin"
+                name="ta-pin-field"
                 type="password"
-                placeholder="Introduce tu contraseña"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete="off"
+                autoComplete="new-password"
+                data-form-type="other"
                 className="h-12 text-base bg-input border-border focus:border-primary"
                 disabled={loginMutation.isPending}
               />

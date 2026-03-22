@@ -8,10 +8,29 @@ function Textarea({
   onKeyDown,
   onCompositionStart,
   onCompositionEnd,
+  onFocus,
+  inputMode,
   ...props
 }: React.ComponentProps<"textarea">) {
   // Get dialog composition context if available (will be no-op if not inside Dialog)
   const dialogComposition = useDialogComposition();
+
+  // iOS Safari trick: temporarily set inputMode to "none" on focus to suppress
+  // the keyboard accessory bar (password/card/key icons). Then restore after a short delay.
+  const [currentInputMode, setCurrentInputMode] = React.useState<
+    React.HTMLAttributes<HTMLTextAreaElement>["inputMode"] | undefined
+  >(inputMode);
+
+  const handleFocus = React.useCallback(
+    (e: React.FocusEvent<HTMLTextAreaElement>) => {
+      setCurrentInputMode("none");
+      setTimeout(() => {
+        setCurrentInputMode(inputMode ?? "text");
+      }, 50);
+      onFocus?.(e);
+    },
+    [inputMode, onFocus]
+  );
 
   // Add composition event handlers to support input method editor (IME) for CJK languages.
   const {
@@ -56,6 +75,9 @@ function Textarea({
       autoCorrect="off"
       autoCapitalize="off"
       spellCheck={false}
+      data-form-type="other"
+      inputMode={currentInputMode}
+      onFocus={handleFocus}
       className={cn(
         "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
         className

@@ -92,3 +92,4 @@
 - [x] Notas de personalización visibles en carrito, cocina, pendientes e historial
 - [x] Bug iOS: barra blanca de autocompletado en campo de nota personalizada del popup de modificadores
 - [x] Bug iOS: barra de herramientas del teclado Safari (llave/tarjeta/ubicación) en inputs de la app
+- [x] Bug iOS: barra blanca de contraseñas/tarjetas sigue apareciendo sobre el teclado en Safari — aplicadas técnicas avanzadas: inputmode dinámico (none→text en onFocus), honeypot fields en login, data-form-type=other, meta tags PWA, ids/names no reconocibles por iOS
