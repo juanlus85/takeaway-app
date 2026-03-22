@@ -5,11 +5,13 @@ import {
   type InsertOrder,
   type InsertOrderItem,
   type InsertProduct,
+  type InsertProductModifier,
   type InsertUser,
   callers,
   categories,
   orderItems,
   orders,
+  productModifiers,
   products,
   users,
 } from "../drizzle/schema";
@@ -251,6 +253,52 @@ export async function getOrderById(orderId: number) {
   if (!db) return undefined;
   const result = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
   return result[0];
+}
+
+// ─── Product Modifiers ──────────────────────────────────────────────────────
+export async function getModifiersByProduct(productId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(productModifiers)
+    .where(and(eq(productModifiers.productId, productId), eq(productModifiers.active, true)))
+    .orderBy(productModifiers.sortOrder);
+}
+
+export async function getModifiersForProducts(productIds: number[]) {
+  const db = await getDb();
+  if (!db) return [];
+  if (productIds.length === 0) return [];
+  return db
+    .select()
+    .from(productModifiers)
+    .where(and(inArray(productModifiers.productId, productIds), eq(productModifiers.active, true)))
+    .orderBy(productModifiers.productId, productModifiers.sortOrder);
+}
+
+export async function createModifier(data: InsertProductModifier) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(productModifiers).values(data);
+}
+
+export async function updateModifier(id: number, data: Partial<InsertProductModifier>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(productModifiers).set(data).where(eq(productModifiers.id, id));
+}
+
+export async function deleteModifier(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(productModifiers).set({ active: false }).where(eq(productModifiers.id, id));
+}
+
+export async function getAllModifiersAdmin() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(productModifiers).orderBy(productModifiers.productId, productModifiers.sortOrder);
 }
 
 // ─── SDK compatibility shims ──────────────────────────────────────────────────

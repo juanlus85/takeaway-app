@@ -15,6 +15,13 @@
       "when": 1772836995716,
       "tag": "0001_wooden_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1774193801499,
+      "tag": "0002_misty_brood",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,7 @@ import {
   Package,
   Plus,
   Settings,
+  SlidersHorizontal,
   Tag,
   Trash2,
   Users,
@@ -503,6 +504,152 @@ function UsersTab() {
   );
 }
 
+// ─── Modifiers Tab ───────────────────────────────────────────────────────────
+function ModifiersTab() {
+  const utils = trpc.useUtils();
+  const { data: products = [] } = trpc.products.listAll.useQuery();
+  const { data: modifiers = [] } = trpc.modifiers.listAdmin.useQuery();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ productId: "", label: "", sortOrder: 0 });
+
+  const createMutation = trpc.modifiers.create.useMutation({
+    onSuccess: () => {
+      toast.success("Modificador creado");
+      setShowForm(false);
+      setForm({ productId: "", label: "", sortOrder: 0 });
+      utils.modifiers.listAdmin.invalidate();
+      utils.modifiers.byProduct.invalidate();
+      utils.modifiers.forProducts.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deleteMutation = trpc.modifiers.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Modificador eliminado");
+      utils.modifiers.listAdmin.invalidate();
+      utils.modifiers.byProduct.invalidate();
+      utils.modifiers.forProducts.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const getProductName = (id: number) => products.find((p) => p.id === id)?.name || "—";
+
+  // Group modifiers by product
+  const byProduct = modifiers.reduce<Record<number, typeof modifiers>>((acc, m) => {
+    if (!acc[m.productId]) acc[m.productId] = [];
+    acc[m.productId].push(m);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Modificadores ({modifiers.length})</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Opciones rápidas de personalización que aparecen en el botón ✏️ del vendedor</p>
+        </div>
+        <Button onClick={() => setShowForm(true)} size="sm">
+          <Plus className="w-4 h-4 mr-1" /> Nuevo Modificador
+        </Button>
+      </div>
+
+      {Object.keys(byProduct).length === 0 ? (
+        <div className="bg-card border border-border rounded-xl p-8 text-center">
+          <SlidersHorizontal className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground">No hay modificadores todavía</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Crea modificadores para que los vendedores puedan personalizar bocadillos (ej: Sin queso, Sin bacon)</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(byProduct).map(([productIdStr, mods]) => {
+            const productId = parseInt(productIdStr);
+            return (
+              <div key={productId} className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 bg-secondary/30 border-b border-border">
+                  <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+                  <span className="font-semibold text-foreground">{getProductName(productId)}</span>
+                  <Badge variant="outline" className="text-xs ml-auto">{mods.length} opciones</Badge>
+                </div>
+                <div className="p-3 flex flex-wrap gap-2">
+                  {mods.map((mod) => (
+                    <div key={mod.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm">
+                      <span className="text-foreground">{mod.label}</span>
+                      <button
+                        onClick={() => { if (confirm(`¿Eliminar "${mod.label}"?`)) deleteMutation.mutate({ id: mod.id }); }}
+                        className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+              Nuevo Modificador
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Producto *</Label>
+              <Select value={form.productId} onValueChange={(v) => setForm({ ...form, productId: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona producto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Etiqueta del modificador *</Label>
+              <Input
+                value={form.label}
+                onChange={(e) => setForm({ ...form, label: e.target.value })}
+                placeholder="Ej: Sin queso, Sin bacon, Sin tomate..."
+                onKeyDown={(e) => e.key === "Enter" && form.productId && form.label.trim() && createMutation.mutate({ productId: parseInt(form.productId), label: form.label.trim(), sortOrder: form.sortOrder })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Orden (opcional)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={form.sortOrder}
+                onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
+              <Button
+                onClick={() => {
+                  if (!form.productId || !form.label.trim()) { toast.error("Rellena todos los campos"); return; }
+                  createMutation.mutate({ productId: parseInt(form.productId), label: form.label.trim(), sortOrder: form.sortOrder });
+                }}
+                disabled={createMutation.isPending}
+              >
+                Crear Modificador
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ─── Main Admin Page ──────────────────────────────────────────────────────────
 export default function Admin() {
   const buildDate = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -530,6 +677,9 @@ export default function Admin() {
                 <TabsTrigger value="users" className="flex items-center gap-2">
                   <Users className="w-4 h-4" /> Usuarios
                 </TabsTrigger>
+                <TabsTrigger value="modifiers" className="flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4" /> Modificadores
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="products">
@@ -540,6 +690,9 @@ export default function Admin() {
               </TabsContent>
               <TabsContent value="users">
                 <UsersTab />
+              </TabsContent>
+              <TabsContent value="modifiers">
+                <ModifiersTab />
               </TabsContent>
             </Tabs>
 

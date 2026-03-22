@@ -84,6 +84,20 @@ export const orders = mysqlTable("orders", {
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = typeof orders.$inferInsert;
 
+// ─── Product Modifiers ──────────────────────────────────────────────────────
+// Opciones de personalización por producto (ej: "Sin queso", "Sin bacon")
+export const productModifiers = mysqlTable("productModifiers", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull(),
+  label: varchar("label", { length: 128 }).notNull(), // ej: "Sin queso"
+  sortOrder: int("sortOrder").default(0).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ProductModifier = typeof productModifiers.$inferSelect;
+export type InsertProductModifier = typeof productModifiers.$inferInsert;
+
 // ─── Order Items ──────────────────────────────────────────────────────────────
 export const orderItems = mysqlTable("orderItems", {
   id: int("id").autoincrement().primaryKey(),
@@ -96,6 +110,7 @@ export const orderItems = mysqlTable("orderItems", {
   requiresKitchen: boolean("requiresKitchen").default(false).notNull(),
   typeNote: varchar("typeNote", { length: 256 }), // ej: "4 quesos" para pizza
   completedInKitchen: boolean("completedInKitchen").default(false).notNull(),
+  customNote: varchar("customNote", { length: 512 }), // nota de personalización del cliente
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

@@ -24,6 +24,7 @@ type OrderItem = {
   quantity: number;
   requiresKitchen: boolean;
   typeNote: string | null;
+  customNote: string | null;
   completedInKitchen: boolean;
 };
 
@@ -179,6 +180,9 @@ function OrderCard({
                 <span className="text-xs text-muted-foreground ml-1">({item.typeNote})</span>
               )}
             </p>
+            {item.customNote && (
+              <p className="text-xs text-amber-400 mt-0.5">✏️ {item.customNote}</p>
+            )}
           </div>
         ))}
       </div>

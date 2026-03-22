@@ -87,3 +87,6 @@
 - [x] Vendedor/Pendientes: solo el vendedor puede marcar "Entregado al cliente"
 - [x] Cocina: mostrar también pedidos preparados (ready) debajo de los pendientes, primero pending luego ready
 - [x] Cocina: tarjetas en estado ready con fondo verde y etiqueta "Pendiente de entrega al cliente"
+- [x] Personalización de productos: icono en esquina del botón abre popup con modificadores y nota libre
+- [x] Modificadores configurables por producto en panel de administración (pestaña Modificadores)
+- [x] Notas de personalización visibles en carrito, cocina, pendientes e historial

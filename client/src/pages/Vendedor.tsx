@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import AppLayout from "@/components/AppLayout";
 import NumericKeypad from "@/components/NumericKeypad";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ShoppingCart, Trash2, X, ChefHat, CreditCard, Minus, Plus, Ban } from "lucide-react";
+import { ShoppingCart, Trash2, X, ChefHat, CreditCard, Minus, Plus, Ban, SlidersHorizontal } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,7 @@ type CartItem = {
   quantity: number;
   requiresKitchen: boolean;
   typeNote?: string;
+  customNote?: string;
 };
 
 type Category = {
@@ -39,7 +40,13 @@ type Product = {
   requiresTypeInput: boolean;
 };
 
-// Virtual "free price" product for each category
+type Modifier = {
+  id: number;
+  productId: number;
+  label: string;
+  sortOrder: number;
+};
+
 type FreeItem = { type: "free"; categoryId: number; categoryName: string; requiresKitchen: boolean };
 
 const ICON_MAP: Record<string, string> = {
@@ -71,11 +78,17 @@ export default function Vendedor() {
   const [pizzaType, setPizzaType] = useState("");
 
   const [showPayModal, setShowPayModal] = useState(false);
-  const [selectedCaller, setSelectedCaller] = useState<number | null>(null);
-  // null = not chosen yet, -1 = explicitly "no caller"
   const [callerChoice, setCallerChoice] = useState<number | null>(null);
 
   const [showCartPanel, setShowCartPanel] = useState(false);
+
+  // ── Customization popup ───────────────────────────────────────────────────────
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [customizeProduct, setCustomizeProduct] = useState<Product | null>(null);
+  const [selectedModifiers, setSelectedModifiers] = useState<string[]>([]);
+  const [customText, setCustomText] = useState("");
+  // Pending action after customization: "add" or "numpad" or "pizza"
+  const [customizeAction, setCustomizeAction] = useState<"add" | "numpad" | "pizza">("add");
 
   const { data: categories = [] } = trpc.categories.list.useQuery();
   const { data: products = [] } = trpc.products.listAll.useQuery();
@@ -84,9 +97,35 @@ export default function Vendedor() {
     refetchInterval: 5000,
     enabled: !!user,
   });
+
+  // Load modifiers for all products in current category
+  const productIdsInCategory = useMemo(() => {
+    if (!selectedCategoryId) return [];
+    return products.filter((p) => p.categoryId === selectedCategoryId).map((p) => p.id);
+  }, [products, selectedCategoryId]);
+
+  const { data: modifiersRaw = [] } = trpc.modifiers.forProducts.useQuery(
+    { productIds: productIdsInCategory },
+    { enabled: productIdsInCategory.length > 0 }
+  );
+
+  // Also load modifiers for the product being customized (in case it's not in current category)
+  const { data: customizeModifiers = [] } = trpc.modifiers.byProduct.useQuery(
+    { productId: customizeProduct?.id ?? 0 },
+    { enabled: !!customizeProduct }
+  );
+
+  const modifiersByProduct = useMemo(() => {
+    const map: Record<number, Modifier[]> = {};
+    for (const m of modifiersRaw) {
+      if (!map[m.productId]) map[m.productId] = [];
+      map[m.productId].push(m);
+    }
+    return map;
+  }, [modifiersRaw]);
+
   const utils = trpc.useUtils();
 
-  // Count orders ready to deliver (status = 'ready')
   const readyCount = useMemo(
     () => (pendingOrders as Array<{ status: string }>).filter((o) => o.status === "ready").length,
     [pendingOrders]
@@ -119,6 +158,14 @@ export default function Vendedor() {
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
   const requiresKitchen = useMemo(() => cart.some((item) => item.requiresKitchen), [cart]);
 
+  // ── Build customNote from selected modifiers + free text ──────────────────────
+  const buildCustomNote = (modifiers: string[], text: string): string | undefined => {
+    const parts: string[] = [];
+    if (modifiers.length > 0) parts.push(modifiers.join(", "));
+    if (text.trim()) parts.push(text.trim());
+    return parts.length > 0 ? parts.join(" | ") : undefined;
+  };
+
   // ── Cart helpers ──────────────────────────────────────────────────────────────
   const addToCart = (
     productId: number | null,
@@ -127,46 +174,115 @@ export default function Vendedor() {
     price: number,
     requiresKitchen: boolean,
     typeNote?: string,
-    fixedPrice = true
+    fixedPrice = true,
+    customNote?: string
   ) => {
-    const key = `${productId ?? "free"}-${categoryName}-${typeNote || ""}`;
+    // Items with customNote always get a unique key (no quantity merge)
+    const key = customNote
+      ? `${productId ?? "free"}-${categoryName}-${typeNote || ""}-${Date.now()}`
+      : `${productId ?? "free"}-${categoryName}-${typeNote || ""}`;
+
     setCart((prev) => {
       const existing = prev.find((i) => i.id === key);
-      if (existing && fixedPrice && productId !== null) {
+      if (existing && fixedPrice && productId !== null && !customNote) {
         return prev.map((i) => i.id === key ? { ...i, quantity: i.quantity + 1 } : i);
       }
+      const displayName = productName + (typeNote ? ` (${typeNote})` : "");
       return [
         ...prev,
         {
-          id: `${productId ?? "free"}-${categoryName}-${Date.now()}`,
+          id: key,
           productId,
-          productName: productName + (typeNote ? ` (${typeNote})` : ""),
+          productName: displayName,
           categoryName,
           price,
           quantity: 1,
           requiresKitchen,
           typeNote,
+          customNote,
         },
       ];
     });
-    toast.success(`${productName} añadido`, { duration: 800 });
+    const noteLabel = customNote ? ` (${customNote})` : "";
+    toast.success(`${productName}${noteLabel} añadido`, { duration: 800 });
   };
 
+  // ── Open customization popup ──────────────────────────────────────────────────
+  const openCustomize = (product: Product, action: "add" | "numpad" | "pizza") => {
+    setCustomizeProduct(product);
+    setSelectedModifiers([]);
+    setCustomText("");
+    setCustomizeAction(action);
+    setShowCustomize(true);
+  };
+
+  const handleCustomizeConfirm = () => {
+    if (!customizeProduct) return;
+    const category = categories.find((c) => c.id === customizeProduct.categoryId);
+    if (!category) return;
+    const note = buildCustomNote(selectedModifiers, customText);
+    setShowCustomize(false);
+
+    if (customizeAction === "numpad") {
+      setNumpadProduct(customizeProduct);
+      setShowNumpad(true);
+      // Store note for when numpad confirms
+      // We'll pass it via a ref-like state
+      setPendingCustomNote(note);
+      return;
+    }
+    if (customizeAction === "pizza") {
+      setPizzaProduct(customizeProduct);
+      setPizzaType("");
+      setShowPizzaInput(true);
+      setPendingCustomNote(note);
+      return;
+    }
+    // action === "add"
+    addToCart(
+      customizeProduct.id,
+      customizeProduct.name,
+      category.name,
+      parseFloat(customizeProduct.price),
+      customizeProduct.requiresKitchen,
+      undefined,
+      true,
+      note
+    );
+  };
+
+  const [pendingCustomNote, setPendingCustomNote] = useState<string | undefined>(undefined);
+
+  const toggleModifier = (label: string) => {
+    setSelectedModifiers((prev) =>
+      prev.includes(label) ? prev.filter((m) => m !== label) : [...prev, label]
+    );
+  };
+
+  // ── Product click handlers ────────────────────────────────────────────────────
   const handleProductClick = (product: Product) => {
     const category = categories.find((c) => c.id === product.categoryId);
     if (!category) return;
     if (product.requiresTypeInput) {
       setPizzaProduct(product);
       setPizzaType("");
+      setPendingCustomNote(undefined);
       setShowPizzaInput(true);
       return;
     }
     if (!product.fixedPrice) {
       setNumpadProduct(product);
+      setPendingCustomNote(undefined);
       setShowNumpad(true);
       return;
     }
     addToCart(product.id, product.name, category.name, parseFloat(product.price), product.requiresKitchen, undefined, true);
+  };
+
+  const handleCustomizeClick = (e: React.MouseEvent, product: Product) => {
+    e.stopPropagation();
+    const action = product.requiresTypeInput ? "pizza" : !product.fixedPrice ? "numpad" : "add";
+    openCustomize(product, action);
   };
 
   const handleFreeItemClick = (cat: Category) => {
@@ -178,7 +294,8 @@ export default function Vendedor() {
     if (!numpadProduct) return;
     const category = categories.find((c) => c.id === numpadProduct.categoryId);
     if (!category) return;
-    addToCart(numpadProduct.id, numpadProduct.name, category.name, amount, numpadProduct.requiresKitchen, undefined, false);
+    addToCart(numpadProduct.id, numpadProduct.name, category.name, amount, numpadProduct.requiresKitchen, undefined, false, pendingCustomNote);
+    setPendingCustomNote(undefined);
     setShowNumpad(false);
     setNumpadProduct(null);
   };
@@ -194,7 +311,8 @@ export default function Vendedor() {
     if (!pizzaProduct || !pizzaType.trim()) return;
     const category = categories.find((c) => c.id === pizzaProduct.categoryId);
     if (!category) return;
-    addToCart(pizzaProduct.id, pizzaProduct.name, category.name, parseFloat(pizzaProduct.price), pizzaProduct.requiresKitchen, pizzaType.trim(), false);
+    addToCart(pizzaProduct.id, pizzaProduct.name, category.name, parseFloat(pizzaProduct.price), pizzaProduct.requiresKitchen, pizzaType.trim(), false, pendingCustomNote);
+    setPendingCustomNote(undefined);
     setShowPizzaInput(false);
     setPizzaProduct(null);
     setPizzaType("");
@@ -233,6 +351,7 @@ export default function Vendedor() {
         quantity: item.quantity,
         requiresKitchen: item.requiresKitchen,
         typeNote: item.typeNote,
+        customNote: item.customNote,
       })),
     });
   };
@@ -248,9 +367,12 @@ export default function Vendedor() {
           </div>
         ) : (
           cart.map((item) => (
-            <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-secondary/50">
+            <div key={item.id} className="flex items-start gap-2 p-2.5 rounded-xl bg-secondary/50">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground leading-tight">{item.productName}</p>
+                {item.customNote && (
+                  <p className="text-xs text-amber-400 mt-0.5 leading-tight">✏️ {item.customNote}</p>
+                )}
                 <p className="text-xs text-primary font-bold mt-0.5">
                   {(item.price * item.quantity).toFixed(2)}€
                 </p>
@@ -353,19 +475,31 @@ export default function Vendedor() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                 {filteredProducts.map((product) => {
                   const category = categories.find((c) => c.id === product.categoryId);
+                  const hasModifiers = (modifiersByProduct[product.id] || []).length > 0;
                   return (
                     <button key={product.id} onClick={() => handleProductClick(product)}
                       className="relative flex flex-col items-start p-3 rounded-2xl bg-card border border-border active:scale-95 transition-transform text-left touch-manipulation">
-                      {product.requiresKitchen && (
+                      {/* Kitchen indicator */}
+                      {product.requiresKitchen && !hasModifiers && (
                         <div className="absolute top-2 right-2">
                           <ChefHat className="w-3 h-3 text-primary/50" />
                         </div>
+                      )}
+                      {/* Customize button — top right corner */}
+                      {hasModifiers && (
+                        <button
+                          onClick={(e) => handleCustomizeClick(e, product)}
+                          className="absolute top-1.5 right-1.5 w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center hover:bg-amber-500/30 active:scale-90 transition-all z-10"
+                          title="Personalizar"
+                        >
+                          <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                        </button>
                       )}
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg mb-2 shrink-0"
                         style={{ backgroundColor: `${category?.color || "#6366f1"}20` }}>
                         {ICON_MAP[category?.icon || "utensils"] || "🍽️"}
                       </div>
-                      <p className="text-sm font-semibold text-foreground leading-tight mb-1 line-clamp-2">{product.name}</p>
+                      <p className="text-sm font-semibold text-foreground leading-tight mb-1 line-clamp-2 pr-6">{product.name}</p>
                       <p className="text-sm font-bold text-primary mt-auto">
                         {product.fixedPrice ? `${parseFloat(product.price).toFixed(2)}€` : "Precio libre"}
                       </p>
@@ -438,6 +572,76 @@ export default function Vendedor() {
         </div>
       )}
 
+      {/* ── Customization popup ── */}
+      <Dialog open={showCustomize} onOpenChange={setShowCustomize}>
+        <DialogContent className="max-w-sm mx-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+              Personalizar — {customizeProduct?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Modifier checkboxes */}
+            {customizeModifiers.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Modificaciones rápidas</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {customizeModifiers.map((mod) => {
+                    const active = selectedModifiers.includes(mod.label);
+                    return (
+                      <button
+                        key={mod.id}
+                        onClick={() => toggleModifier(mod.label)}
+                        className={cn(
+                          "px-3 py-2.5 rounded-xl border text-sm font-medium transition-all active:scale-95 text-left",
+                          active
+                            ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                            : "bg-secondary border-border text-foreground"
+                        )}
+                      >
+                        {active ? "✓ " : ""}{mod.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Free text note */}
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Nota adicional (opcional)</Label>
+              <Input
+                placeholder="Ej: sin sal, bien hecho, sin tomate..."
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCustomizeConfirm()}
+                className="h-11 text-base"
+                autoFocus={customizeModifiers.length === 0}
+              />
+            </div>
+
+            {/* Preview */}
+            {(selectedModifiers.length > 0 || customText.trim()) && (
+              <div className="px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <p className="text-xs text-amber-400 font-medium">
+                  ✏️ {buildCustomNote(selectedModifiers, customText)}
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => setShowCustomize(false)} className="h-11">
+                Cancelar
+              </Button>
+              <Button onClick={handleCustomizeConfirm} className="h-11 font-bold">
+                {customizeAction === "add" ? "Añadir al pedido" : "Continuar →"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Numpad for products with free price ── */}
       <Dialog open={showNumpad} onOpenChange={setShowNumpad}>
         <DialogContent className="max-w-xs mx-auto">
@@ -494,12 +698,17 @@ export default function Vendedor() {
             {/* Summary */}
             <div className="bg-secondary/50 rounded-xl p-3 space-y-1.5 max-h-48 overflow-y-auto">
               {cart.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm">
-                  <span className="text-foreground">
-                    {item.quantity > 1 && <span className="text-primary font-bold mr-1">{item.quantity}×</span>}
-                    {item.productName}
-                  </span>
-                  <span className="font-semibold shrink-0 ml-2">{(item.price * item.quantity).toFixed(2)}€</span>
+                <div key={item.id} className="space-y-0.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-foreground">
+                      {item.quantity > 1 && <span className="text-primary font-bold mr-1">{item.quantity}×</span>}
+                      {item.productName}
+                    </span>
+                    <span className="font-semibold shrink-0 ml-2">{(item.price * item.quantity).toFixed(2)}€</span>
+                  </div>
+                  {item.customNote && (
+                    <p className="text-xs text-amber-400 pl-1">✏️ {item.customNote}</p>
+                  )}
                 </div>
               ))}
               <div className="border-t border-border pt-2 mt-1 flex justify-between font-bold">

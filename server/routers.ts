@@ -154,6 +154,7 @@ export const appRouter = router({
           quantity: z.number().default(1),
           requiresKitchen: z.boolean(),
           typeNote: z.string().optional(),
+          customNote: z.string().optional(),
         })),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -175,6 +176,7 @@ export const appRouter = router({
             quantity: item.quantity,
             requiresKitchen: item.requiresKitchen,
             typeNote: item.typeNote,
+            customNote: item.customNote,
           }))
         );
         // Mark caller as in use
@@ -250,6 +252,43 @@ export const appRouter = router({
           items: items.filter((i) => i.orderId === order.id),
         }));
       }),
+  }),
+
+  // ─── Modifiers ──────────────────────────────────────────────────────
+  modifiers: router({
+    // Get modifiers for a specific product (used in vendor screen)
+    byProduct: publicProcedure
+      .input(z.object({ productId: z.number() }))
+      .query(({ input }) => db.getModifiersByProduct(input.productId)),
+
+    // Get modifiers for multiple products at once (batch load)
+    forProducts: publicProcedure
+      .input(z.object({ productIds: z.array(z.number()) }))
+      .query(({ input }) => db.getModifiersForProducts(input.productIds)),
+
+    // Admin CRUD
+    listAdmin: adminProcedure.query(() => db.getAllModifiersAdmin()),
+    create: adminProcedure
+      .input(z.object({
+        productId: z.number(),
+        label: z.string().min(1),
+        sortOrder: z.number().default(0),
+      }))
+      .mutation(({ input }) => db.createModifier(input)),
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        label: z.string().min(1).optional(),
+        sortOrder: z.number().optional(),
+        active: z.boolean().optional(),
+      }))
+      .mutation(({ input }) => {
+        const { id, ...data } = input;
+        return db.updateModifier(id, data);
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => db.deleteModifier(input.id)),
   }),
 
   // ─── Admin: Users ─────────────────────────────────────────────────────────
