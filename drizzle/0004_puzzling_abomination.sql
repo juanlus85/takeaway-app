@@ -1,0 +1,1 @@
+ALTER TABLE `orders` MODIFY COLUMN `readyAt` timestamp DEFAULT null;
