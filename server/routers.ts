@@ -239,6 +239,52 @@ export const appRouter = router({
       .input(z.object({ itemId: z.number(), completed: z.boolean() }))
       .mutation(({ input }) => db.markItemCompleted(input.itemId, input.completed)),
 
+    // Update an existing order (edit items, add/remove products)
+    update: sellerProcedure
+      .input(z.object({
+        orderId: z.number(),
+        items: z.array(z.object({
+          id: z.number().optional(), // existing item id
+          productId: z.number().nullable(),
+          productName: z.string(),
+          categoryName: z.string(),
+          price: z.string(),
+          quantity: z.number().default(1),
+          requiresKitchen: z.boolean(),
+          typeNote: z.string().optional(),
+          customNote: z.string().optional(),
+        })),
+        total: z.string(),
+        requiresKitchen: z.boolean(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const order = await db.getOrderById(input.orderId);
+        if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido no encontrado" });
+        if (order.status === "delivered") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "No se puede editar un pedido ya entregado" });
+        }
+        await db.updateOrderItems(input.orderId, input.items, input.total, input.requiresKitchen, input.notes);
+        return { success: true };
+      }),
+
+    // Revert delivered order back to ready (undo delivery mistake)
+    revertToReady: protectedProcedure
+      .input(z.object({ orderId: z.number() }))
+      .mutation(async ({ input }) => {
+        const order = await db.getOrderById(input.orderId);
+        if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido no encontrado" });
+        if (order.status !== "delivered") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "El pedido no está entregado" });
+        }
+        // Re-occupy the caller if it had one
+        if (order.callerNumber) {
+          await db.setCallerInUse(order.callerNumber, order.id);
+        }
+        await db.revertOrderToReady(input.orderId);
+        return { success: true };
+      }),
+
     // History of delivered orders
     history: protectedProcedure
       .input(z.object({ limit: z.number().default(100) }))

@@ -77,6 +77,7 @@ export const orders = mysqlTable("orders", {
   requiresKitchen: boolean("requiresKitchen").default(false).notNull(),
   notes: text("notes"),
   paidAt: timestamp("paidAt").defaultNow().notNull(),
+  readyAt: timestamp("readyAt"), // cuando cocina marca como preparado
   deliveredAt: timestamp("deliveredAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

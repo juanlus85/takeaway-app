@@ -101,3 +101,9 @@
 - [x] Configurar meta tags PWA en index.html (apple-touch-icon, theme-color, manifest)
 - [x] Añadir banner de instalación en la pantalla de login (iOS: instrucciones paso a paso; Android: botón instalar directo)
 - [x] Bug PWA: orientación bloqueada en vertical — manifest.json orientation cambiado a "any", viewport sin user-scalable=no
+
+## Mejoras v2
+- [x] Pendientes: ordenar por tiempo desde que cocina marcó como preparado (campo ready_at), no por tiempo total del pedido
+- [x] Historial: mostrar número de llamador en cada pedido
+- [x] Historial: botón para reenviar pedido a estado "pendiente de entrega" (deshacer entrega por error)
+- [x] Editar pedido ya enviado a cocina (añadir/quitar productos, modificadores)

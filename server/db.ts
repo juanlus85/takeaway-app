@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, or, sql, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   type InsertCategory,
@@ -179,11 +179,17 @@ export async function createOrder(order: InsertOrder, items: Omit<InsertOrderIte
 export async function getPendingOrders() {
   const db = await getDb();
   if (!db) return [];
+  // Orden: primero los "ready" (preparados) por readyAt ASC (el más antiguo primero),
+  // luego los "pending" (en cocina) por paidAt ASC.
+  // Así los que van saliendo de cocina se añaden al final de la cola de entrega.
   return db
     .select()
     .from(orders)
     .where(inArray(orders.status, ["pending", "ready"]))
-    .orderBy(orders.paidAt);
+    .orderBy(
+      sql`CASE WHEN ${orders.status} = 'ready' THEN 0 ELSE 1 END`,
+      sql`COALESCE(${orders.readyAt}, ${orders.paidAt})`
+    );
 }
 
 export async function getKitchenOrders() {
@@ -225,7 +231,7 @@ export async function markOrderDelivered(orderId: number) {
 export async function markOrderReady(orderId: number) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  await db.update(orders).set({ status: "ready" }).where(eq(orders.id, orderId));
+  await db.update(orders).set({ status: "ready", readyAt: new Date() }).where(eq(orders.id, orderId));
 }
 
 export async function markItemCompleted(itemId: number, completed: boolean) {
@@ -246,6 +252,62 @@ export async function getDeliveredOrders(limit = 100) {
     .where(eq(orders.status, "delivered"))
     .orderBy(desc(orders.deliveredAt))
     .limit(limit);
+}
+
+export async function updateOrderItems(
+  orderId: number,
+  items: Array<{
+    id?: number;
+    productId: number | null;
+    productName: string;
+    categoryName: string;
+    price: string;
+    quantity: number;
+    requiresKitchen: boolean;
+    typeNote?: string;
+    customNote?: string;
+  }>,
+  total: string,
+  requiresKitchen: boolean,
+  notes?: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+
+  // Delete all existing items and replace with the new list
+  await db.delete(orderItems).where(eq(orderItems.orderId, orderId));
+
+  if (items.length > 0) {
+    await db.insert(orderItems).values(
+      items.map((item) => ({
+        orderId,
+        productId: item.productId,
+        productName: item.productName,
+        categoryName: item.categoryName,
+        price: item.price,
+        quantity: item.quantity,
+        requiresKitchen: item.requiresKitchen,
+        typeNote: item.typeNote,
+        customNote: item.customNote,
+        completedInKitchen: false,
+      }))
+    );
+  }
+
+  // Update order totals and flags
+  await db
+    .update(orders)
+    .set({ total, requiresKitchen, notes: notes ?? null })
+    .where(eq(orders.id, orderId));
+}
+
+export async function revertOrderToReady(orderId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db
+    .update(orders)
+    .set({ status: "ready", deliveredAt: null })
+    .where(eq(orders.id, orderId));
 }
 
 export async function getOrderById(orderId: number) {
