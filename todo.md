@@ -115,3 +115,5 @@
 - [x] App cajón: hook useDrawerPolling en React Native que hace polling cada 2s y abre el cajón por Bluetooth al detectar solicitud
 - [x] TakeAway: botón "Abrir Cajón" en menú lateral (visible para vendedor y admin), llama a localhost:3000/api/open-drawer
 - [x] Bug cajón: la llamada a localhost:3000 se hacía desde el servidor (fetch failed) — movida al cliente (navegador, fetch directo desde el browser de la tablet)
+- [x] Cajón: deep link abrircajon://open en APK (Intent Filter en app.config.ts + hook useDeepLinkDrawer)
+- [x] TakeAway: botón cajón usa window.location.href="abrircajon://open" en lugar de fetch (evita mixed content HTTPS)
