@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -500,6 +500,8 @@ function OrderCard({
 }
 
 // ─── Pantalla principal ───────────────────────────────────────────────────────
+const BELL_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310419663031419078/jSyvM5fSkpToMpM2XPVTG6/bell_0e705f9d.wav";
+
 export default function Pendientes() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
@@ -524,6 +526,45 @@ export default function Pendientes() {
   // Split by status
   const inKitchen = pendingOrders.filter((o) => o.status === "pending");
   const readyToDeliver = pendingOrders.filter((o) => o.status === "ready");
+
+  // ── Sonido campanita cuando aparece un nuevo pedido listo ──────────────────
+  const prevReadyIdsRef = useRef<Set<number>>(new Set());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isFirstLoadRef = useRef(true);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const currentIds = new Set(readyToDeliver.map((o) => o.id));
+
+    if (isFirstLoadRef.current) {
+      // Primera carga: guardar los IDs actuales sin sonar
+      isFirstLoadRef.current = false;
+      prevReadyIdsRef.current = currentIds;
+      return;
+    }
+
+    // Detectar IDs nuevos que no estaban antes
+    const hasNew = Array.from(currentIds).some((id) => !prevReadyIdsRef.current.has(id));
+
+    if (hasNew) {
+      // Reproducir campanita
+      try {
+        if (!audioRef.current) {
+          audioRef.current = new Audio(BELL_URL);
+          audioRef.current.volume = 0.85;
+        }
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {
+          // Autoplay bloqueado por el navegador — silencioso
+        });
+      } catch {
+        // Ignorar errores de audio
+      }
+    }
+
+    prevReadyIdsRef.current = currentIds;
+  }, [readyToDeliver, isLoading]);
 
   return (
     <AppLayout>
