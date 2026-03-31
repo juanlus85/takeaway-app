@@ -301,6 +301,15 @@ export async function updateOrderItems(
     .where(eq(orders.id, orderId));
 }
 
+export async function revertOrderToPending(orderId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db
+    .update(orders)
+    .set({ status: "pending", readyAt: null })
+    .where(eq(orders.id, orderId));
+}
+
 export async function revertOrderToReady(orderId: number) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");

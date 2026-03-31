@@ -268,6 +268,19 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Revert ready order back to pending/in-kitchen (kitchen undo — only from kitchen screen)
+    revertToPending: kitchenProcedure
+      .input(z.object({ orderId: z.number() }))
+      .mutation(async ({ input }) => {
+        const order = await db.getOrderById(input.orderId);
+        if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido no encontrado" });
+        if (order.status !== "ready") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "El pedido no está en estado preparado" });
+        }
+        await db.revertOrderToPending(input.orderId);
+        return { success: true };
+      }),
+
     // Revert delivered order back to ready (undo delivery mistake)
     revertToReady: protectedProcedure
       .input(z.object({ orderId: z.number() }))

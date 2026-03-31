@@ -107,3 +107,4 @@
 - [x] Historial: mostrar número de llamador en cada pedido
 - [x] Historial: botón para reenviar pedido a estado "pendiente de entrega" (deshacer entrega por error)
 - [x] Editar pedido ya enviado a cocina (añadir/quitar productos, modificadores)
+- [x] Cocina: botón para revertir pedido de "preparado" (ready) a "en cocina" (pending) — solo visible en pantalla Cocina

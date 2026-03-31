@@ -5,7 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CheckCircle2, ChefHat, Clock, User } from "lucide-react";
+import { CheckCircle2, ChefHat, Clock, RotateCcw, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type OrderItem = {
@@ -77,12 +77,16 @@ function KitchenOrderCard({
   order,
   onDeliver,
   onToggleItem,
+  onRevertToPending,
   isMarkingReady,
+  isReverting,
 }: {
   order: KitchenOrder;
   onDeliver: (id: number) => void;
   onToggleItem: (itemId: number, completed: boolean) => void;
+  onRevertToPending?: (id: number) => void;
   isMarkingReady?: boolean;
+  isReverting?: boolean;
 }) {
   const elapsed = useElapsedTime(order.paidAt);
   const allCompleted = order.items.every((i) => i.completedInKitchen);
@@ -189,7 +193,7 @@ function KitchenOrderCard({
       )}
 
       {/* Footer */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-4 space-y-2">
         {!isReady && (
           <Button
             onClick={() => onDeliver(order.id)}
@@ -206,6 +210,18 @@ function KitchenOrderCard({
             {allCompleted ? "✅ PEDIDO PREPARADO" : "Marcar como Preparado"}
           </Button>
         )}
+        {isReady && onRevertToPending && (
+          <Button
+            onClick={() => onRevertToPending(order.id)}
+            disabled={isReverting}
+            variant="outline"
+            size="sm"
+            className="w-full text-xs text-muted-foreground hover:text-foreground border-border/50 bg-transparent"
+          >
+            <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+            Volver a cocina
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -218,6 +234,15 @@ export default function Cocina() {
   const { data: orders = [], isLoading } = trpc.orders.kitchen.useQuery(undefined, {
     refetchInterval: 5000, // Poll every 5 seconds for real-time updates
     enabled: !!user,
+  });
+
+  const revertToPendingMutation = trpc.orders.revertToPending.useMutation({
+    onSuccess: () => {
+      toast.success("Pedido revertido a \"en cocina\"", { duration: 2000 });
+      utils.orders.kitchen.invalidate();
+      utils.orders.pending.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   const markReadyMutation = trpc.orders.markReady.useMutation({
@@ -259,6 +284,10 @@ export default function Cocina() {
 
   const handleToggleItem = (itemId: number, completed: boolean) => {
     toggleItemMutation.mutate({ itemId, completed });
+  };
+
+  const handleRevertToPending = (orderId: number) => {
+    revertToPendingMutation.mutate({ orderId });
   };
 
   return (
@@ -355,14 +384,16 @@ export default function Cocina() {
                         <span className="ml-2 text-xs font-normal text-muted-foreground">({readyOrders.length})</span>
                       </h2>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 opacity-60">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 opacity-80">
                       {readyOrders.map((order) => (
                         <KitchenOrderCard
                           key={order.id}
                           order={order}
                           onDeliver={handleMarkReady}
                           onToggleItem={handleToggleItem}
+                          onRevertToPending={handleRevertToPending}
                           isMarkingReady={markReadyMutation.isPending}
+                          isReverting={revertToPendingMutation.isPending}
                         />
                       ))}
                     </div>
