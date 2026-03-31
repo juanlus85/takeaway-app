@@ -114,3 +114,4 @@
 - [x] App cajón: añadir endpoint POST /api/open-drawer en servidor Express (puerto 3000)
 - [x] App cajón: hook useDrawerPolling en React Native que hace polling cada 2s y abre el cajón por Bluetooth al detectar solicitud
 - [x] TakeAway: botón "Abrir Cajón" en menú lateral (visible para vendedor y admin), llama a localhost:3000/api/open-drawer
+- [x] Bug cajón: la llamada a localhost:3000 se hacía desde el servidor (fetch failed) — movida al cliente (navegador, fetch directo desde el browser de la tablet)

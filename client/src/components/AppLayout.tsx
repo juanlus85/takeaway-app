@@ -1,6 +1,6 @@
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
 import {
   ChefHat,
   ClipboardList,
@@ -31,30 +31,42 @@ const navItems: NavItem[] = [
 ];
 
 function DrawerButton() {
-  const openDrawer = trpc.drawer.open.useMutation({
-    onSuccess: () => {
+  const [pending, setPending] = useState(false);
+
+  const handleOpen = async () => {
+    if (pending) return;
+    setPending(true);
+    try {
+      // La llamada se hace desde el navegador de la tablet (cliente),
+      // donde localhost:3000 es la app del cajón instalada localmente.
+      const res = await fetch("http://localhost:3000/api/open-drawer", {
+        method: "POST",
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       toast.success("Cajón abierto");
-    },
-    onError: (err) => {
-      toast.error(err.message || "Error al abrir el cajón");
-    },
-  });
+    } catch (err: any) {
+      toast.error("¿Está abierta la app del cajón? (" + (err.message || "Error de conexión") + ")");
+    } finally {
+      setPending(false);
+    }
+  };
 
   return (
     <div className="px-1.5 pb-1">
       <button
-        onClick={() => openDrawer.mutate()}
-        disabled={openDrawer.isPending}
+        onClick={handleOpen}
+        disabled={pending}
         title="Abrir cajón"
         className={cn(
           "w-full flex items-center justify-center md:justify-start gap-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-all active:scale-95",
           "text-amber-400 hover:bg-amber-500/10 hover:text-amber-300",
-          openDrawer.isPending && "opacity-50 cursor-not-allowed"
+          pending && "opacity-50 cursor-not-allowed"
         )}
       >
         <Archive className="w-5 h-5 shrink-0" />
         <span className="hidden md:block">
-          {openDrawer.isPending ? "Abriendo..." : "Abrir Cajón"}
+          {pending ? "Abriendo..." : "Abrir Cajón"}
         </span>
       </button>
     </div>
