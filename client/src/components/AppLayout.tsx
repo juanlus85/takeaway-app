@@ -9,8 +9,11 @@ import {
   Settings,
   ShoppingCart,
   UtensilsCrossed,
+  Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 type NavItem = {
   icon: React.ElementType;
@@ -26,6 +29,37 @@ const navItems: NavItem[] = [
   { icon: History, label: "Historial", path: "/historial", roles: ["seller", "kitchen", "admin"] },
   { icon: Settings, label: "Admin", path: "/admin", roles: ["admin"] },
 ];
+
+function DrawerButton() {
+  const openDrawer = trpc.drawer.open.useMutation({
+    onSuccess: () => {
+      toast.success("Cajón abierto");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Error al abrir el cajón");
+    },
+  });
+
+  return (
+    <div className="px-1.5 pb-1">
+      <button
+        onClick={() => openDrawer.mutate()}
+        disabled={openDrawer.isPending}
+        title="Abrir cajón"
+        className={cn(
+          "w-full flex items-center justify-center md:justify-start gap-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-all active:scale-95",
+          "text-amber-400 hover:bg-amber-500/10 hover:text-amber-300",
+          openDrawer.isPending && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <Archive className="w-5 h-5 shrink-0" />
+        <span className="hidden md:block">
+          {openDrawer.isPending ? "Abriendo..." : "Abrir Cajón"}
+        </span>
+      </button>
+    </div>
+  );
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -96,6 +130,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        {/* Botón cajón — solo para seller y admin */}
+        {(role === "seller" || role === "admin") && (
+          <DrawerButton />
+        )}
 
         {/* User footer */}
         <div className="p-1.5 border-t border-sidebar-border shrink-0">

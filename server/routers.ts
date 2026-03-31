@@ -350,6 +350,31 @@ export const appRouter = router({
       .mutation(({ input }) => db.deleteModifier(input.id)),
   }),
 
+  // ─── Cajón (Cash Drawer) ─────────────────────────────────────────────────
+  // La app del cajón corre en la misma tablet en localhost:3000
+  // No se necesita configuración de IP — siempre es localhost
+  drawer: router({
+    open: sellerProcedure
+      .mutation(async () => {
+        // La app del cajón (Abrir Cajón APK) corre en la misma tablet
+        // Su servidor Express escucha en el puerto 3000 por defecto
+        const DRAWER_APP_URL = "http://localhost:3000";
+        try {
+          const res = await fetch(`${DRAWER_APP_URL}/api/open-drawer`, {
+            method: "POST",
+            signal: AbortSignal.timeout(5000),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `No se pudo contactar con la app del cajón. ¿Está abierta? (${err.message})`,
+          });
+        }
+      }),
+  }),
+
   // ─── Admin: Users ─────────────────────────────────────────────────────────
   adminUsers: router({
     list: adminProcedure.query(() => db.getAllUsers()),

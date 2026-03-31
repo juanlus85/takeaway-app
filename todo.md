@@ -109,3 +109,8 @@
 - [x] Editar pedido ya enviado a cocina (añadir/quitar productos, modificadores)
 - [x] Cocina: botón para revertir pedido de "preparado" (ready) a "en cocina" (pending) — solo visible en pantalla Cocina
 - [x] Pendientes: sonido de campanita cuando aparece un nuevo pedido listo para entregar al cliente
+
+## Integración Cajón
+- [x] App cajón: añadir endpoint POST /api/open-drawer en servidor Express (puerto 3000)
+- [x] App cajón: hook useDrawerPolling en React Native que hace polling cada 2s y abre el cajón por Bluetooth al detectar solicitud
+- [x] TakeAway: botón "Abrir Cajón" en menú lateral (visible para vendedor y admin), llama a localhost:3000/api/open-drawer
